@@ -1,0 +1,10 @@
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/00028.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/294860512_dfa1225d41_o.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/510736925_8968bb8b5d_o.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/00080.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/138408872_2f903a81d4_o.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/294860512_dfa1225d41_o_resized.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/00283.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/513617927_486a4b668f_o.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/448516380_0b99d08a54_o.jpg
+/home/egoedeke/OneDrive/ETH/3DVision/glue-factory/mini_depth_10/472295643_cbb8fe1c06_o.jpg
