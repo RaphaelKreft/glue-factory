@@ -132,8 +132,9 @@ def ha_df(img, num=100, border_margin=3, min_counts=5):
     aggregated_heatmap_nan = aggregated_heatmap.copy()
     aggregated_heatmap_nan[~mask] = np.nan
     
-    aggregated_heatmap_non_nan = np.nan_to_num(aggregated_heatmap_nan, nan=0.0)
-    median_scores_non_zero = np.nanmedian(aggregated_heatmap_non_nan, axis=2)
+    median_scores_non_zero = np.nanmedian(aggregated_heatmap_nan, axis=2)
+    
+
 
     
     #plt.figure(figsize=(20,20))
