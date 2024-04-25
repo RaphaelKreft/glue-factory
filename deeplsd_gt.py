@@ -19,7 +19,7 @@ import cv2
 from gluefactory.datasets.homographies_deeplsd import warp_lines
 from gluefactory.geometry.homography import warp_lines_torch
 from gluefactory.datasets.homographies import sample_homography
-from homography_adaptation import torch_homography_adaptation
+from gluefactory.ground_truth_generation.generate_gt_deeplsd import generate_ground_truth_with_homography_adaptation
 import flow_vis
 from gluefactory.geometry.homography import warp_points
 
@@ -118,7 +118,7 @@ model2.eval()
 # Show lines
 #print(lines[0][0][0])
 
-distance_field, angle_field, _ = torch_homography_adaptation(img_torch,model2,num_H=100,aggregation="mean", bs=5)
+distance_field, angle_field, _ = generate_ground_truth_with_homography_adaptation(img_torch,model2,num_H=100,aggregation="mean", bs=5)
 
 #print(lines.shape)
 #lines = lines.numpy()
