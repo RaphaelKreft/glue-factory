@@ -6,7 +6,6 @@ import collections.abc as collections
 
 import numpy as np
 import torch
-import cv2
 
 string_classes = (str, bytes)
 
