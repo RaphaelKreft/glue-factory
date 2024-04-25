@@ -10,9 +10,6 @@ import torch.nn.functional as F
 
 from gluefactory.models.base_model import BaseModel
 from gluefactory.models.backbones.vgg_unet import VGGUNet
-#from .backbones.vgg_unet import VGGUNet
-#from ..geometry.line_utils import merge_lines, filter_outlier_lines
-#from ..utils.tensor import preprocess_angle
 from gluefactory.geometry.line_utils import merge_lines, filter_outlier_lines
 from gluefactory.utils.tensor import preprocess_angle
 from pytlsd import lsd
