@@ -12,7 +12,7 @@ from scipy.sparse.csgraph import connected_components
 
 from gluefactory.datasets.homographies_deeplsd import warp_lines
 
-from gluefactory.utils.tensor import preprocess_angle, nn_interpolate_numpy, bilinear_interpolate_numpy, compute_image_grad
+from gluefactory.utils.deeplsd_utils import preprocess_angle, nn_interpolate_numpy, bilinear_interpolate_numpy, compute_image_grad
 
 
 UPM_EPS = 1e-8
