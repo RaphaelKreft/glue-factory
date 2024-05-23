@@ -12,7 +12,7 @@ class DeepLSD(BaseModel):
         "max_num_lines": None,
         "force_num_lines": False,
         "model_conf": {
-            "detect_lines": True,
+            "detect_lines": False,
             "line_detection_params": {
                 "merge": False,
                 "grad_nfa": True,

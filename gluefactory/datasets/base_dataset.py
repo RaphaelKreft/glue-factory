@@ -152,9 +152,9 @@ class BaseDataset(metaclass=ABCMeta):
         """To be implemented by the child class."""
         raise NotImplementedError
 
-    def get_data_loader(self, split, shuffle=None, pinned=False, distributed=False):
+    def get_data_loader(self, split, shuffle=None, pinned=False, distributed:bool=False):
         """Return a data loader for a given split."""
-        assert split in ["train", "val", "test"]
+        assert split in ["train", "val", "test", "all"]
         dataset = self.get_dataset(split)
         try:
             batch_size = self.conf[split + "_batch_size"]

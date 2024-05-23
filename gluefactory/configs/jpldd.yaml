@@ -3,9 +3,8 @@ data:
     data_dir: "minidepth/images"  # as subdirectory of DATA_PATH(defined in settings.py)
     grayscale: False
     num_workers: 0  # defines processes used in Dataloader
-    train_batch_size: 2  # 2 per GPU
+    train_batch_size: 1  # 2 per GPU
     val_batch_size: 1
-    device: null
     prefetch_factor: null
     preprocessing:
         resize: [ 800, 800 ]
@@ -25,17 +24,27 @@ model:
     model_name: "aliked-n16"
     line_neighborhood: 5
     max_num_keypoints: 1000  # setting for training, for eval: -1
-    pretrained: True
+    training:
+        do: True
+        aliked_pretrained: True
+        train_descriptors:
+            do: True # if train is True, initialize ALIKED Light model form OTF Descriptor GT
+            gt_aliked_model: "aliked-n32"
+        pretrain_kp_decoder: False
+        lambda_weighted_bce: 200
+        loss_weights:
+            line_af_weight: 10
+            line_df_weight: 10
+            keypoint_weight: 1
+            descriptor_loss: 1
+    checkpoint: null  # if given load model weights from this checkpoint
     timeit: True  # override timeit: False from BaseModel
-    train_descriptors:
-        do: False  # if train is True, initialize ALIKED Light model form OTF Descriptor GT
-        device: null # device to house the lightweight ALIKED model
 train:
     load_experiment: null  # initialize the model from a previous experiment (take weights)
     seed: 0
     epochs: 100
     log_every_iter: 1
-    eval_every_iter: 738 # automatically creates new checkpoint if new best eval metric is reached -> set to batch num to do only every epoch
+    eval_every_iter: 3000 # automatically creates new checkpoint if new best eval metric is reached -> set > batch size to not eval except at the end of each epoch
     save_every_iter: 500
     test_every_epoch: 10 # check if test deactivated
     optimizer: "adam"

@@ -206,11 +206,12 @@ def compute_repeatability(data: np.array, pred: np.array, images: torch.Tensor, 
         warped_keypoints = np.stack([warped_keypoints[0],
                                      warped_keypoints[1],
                                      warped_prob], axis=-1)
-        warped_keypoints = keep_true_keypoints(warped_keypoints, np.linalg.inv(H),
+        H_np = H.cpu().numpy()
+        warped_keypoints = keep_true_keypoints(warped_keypoints, np.linalg.inv(H_np),
                                                shape)
 
         # Warp the original keypoints with the true homography
-        true_warped_keypoints = warp_keypoints(keypoints[:, [1, 0]], H)
+        true_warped_keypoints = warp_keypoints(keypoints[:, [1, 0]], H_np)
         true_warped_keypoints = np.stack([true_warped_keypoints[:, 1],
                                           true_warped_keypoints[:, 0],
                                           prob], axis=-1)

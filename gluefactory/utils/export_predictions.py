@@ -71,7 +71,7 @@ def export_predictions(
                 if (dt == np.float32) and (dt != np.float16):
                     pred[k] = pred[k].astype(np.float16)
         try:
-            name = data["name"]  #[0] # todo use relative name/path
+            name = data["name"][0]  #[0] # todo use relative name/path
             grp = hfile.create_group(name)
             for k, v in pred.items():
                 grp.create_dataset(k, data=v)

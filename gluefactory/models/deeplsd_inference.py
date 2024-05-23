@@ -22,7 +22,7 @@ class DeepLSD(BaseModel):
         'line_neighborhood': 5,
         'multiscale': False,
         'scale_factors': [1., 1.5],
-        'detect_lines': True,
+        'detect_lines': False,
         'line_detection_params': {
             'merge': False,
             'grad_nfa': True,
