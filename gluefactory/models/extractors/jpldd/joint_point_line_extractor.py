@@ -13,7 +13,7 @@ from gluefactory.models.base_model import BaseModel
 from gluefactory.models.extractors.jpldd.backbone_encoder import AlikedEncoder, aliked_cfgs
 from gluefactory.models.extractors.jpldd.descriptor_head import SDDH
 from gluefactory.models.extractors.jpldd.keypoint_decoder import SMH
-from gluefactory.models.extractors.jpldd.keypoint_detection import SimpleDetector, DKD
+from gluefactory.models.extractors.jpldd.keypoint_detection import SimpleDetector, DKD, DKDLight
 from gluefactory.models.extractors.jpldd.utils import InputPadder, change_dict_key
 from gluefactory.models.extractors.jpldd.metrics import compute_pr, compute_loc_error, compute_repeatability
 from gluefactory.models.extractors.jpldd.line_detection_lsd import detect_afm_lines
@@ -27,6 +27,8 @@ class JointPointLineDetectorDescriptor(BaseModel):
     # currently contains only ALIKED
     default_conf = {
         "aliked_model_name": "aliked-n16",
+        "line_df_decoder_channels": 32,
+        "line_af_decoder_channels": 32,
         "max_num_keypoints": 1000,  # setting for training, for eval: -1
         "detection_threshold": -1,  # setting for training, for eval: 0.2
         "force_num_keypoints": False,
@@ -56,7 +58,7 @@ class JointPointLineDetectorDescriptor(BaseModel):
             },
         },
         "checkpoint": "rk_jpldd_04/checkpoint_best.tar",  # if given and non-null, load model checkpoint
-        "nms_radius": 2,
+        "nms_radius": 3,
         "line_neighborhood": 5,  # used to normalize / denormalize line distance field
         "timeit": True,  # override timeit: False from BaseModel
     }
@@ -77,10 +79,7 @@ class JointPointLineDetectorDescriptor(BaseModel):
         # Load Network Components
         self.encoder_backbone = AlikedEncoder(aliked_model_cfg)
         self.keypoint_and_junction_branch = SMH(dim)  # using SMH from ALIKE here
-        #self.detector = SimpleDetector(nms_radius=conf.nms_radius,
-        #                               num_keypoints=-1 if conf.detection_threshold > 0 else conf.max_num_keypoints,
-        #                               threshold=conf.detection_threshold)
-        self.dkd = DKD(radius=conf.nms_radius,
+        self.dkd = DKDLight(radius=conf.nms_radius,
                        top_k=-1 if conf.detection_threshold > 0 else conf.max_num_keypoints,
                        scores_th=conf.detection_threshold,
                        n_limit=(
@@ -93,27 +92,25 @@ class JointPointLineDetectorDescriptor(BaseModel):
         self.line_descriptor = torch.lerp  # we take the endpoints of lines and interpolate to get the descriptor
         # Line Attraction Field information (Line Distance Field and Angle Field)
         self.distance_field_branch = nn.Sequential(
-            nn.Conv2d(dim, 64, kernel_size=3, padding=1),
+            nn.Conv2d(dim, conf.line_df_decoder_channels, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(conf.line_df_decoder_channels),
+            nn.Conv2d(conf.line_df_decoder_channels, conf.line_df_decoder_channels, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 1, kernel_size=1),
+            nn.BatchNorm2d(conf.line_df_decoder_channels),
+            nn.Conv2d(conf.line_df_decoder_channels, 1, kernel_size=1),
             nn.ReLU(),
         )
         self.angle_field_branch = nn.Sequential(
-            nn.Conv2d(dim, 64, kernel_size=3, padding=1),
+            nn.Conv2d(dim, conf.line_af_decoder_channels, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(conf.line_af_decoder_channels),
+            nn.Conv2d(conf.line_af_decoder_channels, conf.line_af_decoder_channels, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 1, kernel_size=1),
+            nn.BatchNorm2d(conf.line_af_decoder_channels),
+            nn.Conv2d(conf.line_af_decoder_channels, 1, kernel_size=1),
             nn.Sigmoid(),
         )
-        # ToDo Figure out heuristics
-        # self.line_extractor = LineExtractor(torch.device("cpu"), self.line_extractor_cfg)
 
         if conf.timeit:
             self.timings = {
@@ -244,12 +241,12 @@ class JointPointLineDetectorDescriptor(BaseModel):
         # Keypoint detection
         if self.conf.timeit:
             start_keypoints = time.time()
-            keypoints, kptscores, _ = self.dkd(
+            keypoints, kptscores = self.dkd(
                 keypoint_and_junction_score_map,
             )
             self.timings["keypoint-detection"].append(time.time() - start_keypoints)
         else:
-            keypoints, kptscores, _ = self.dkd(
+            keypoints, kptscores = self.dkd(
                 keypoint_and_junction_score_map,
             )
 
