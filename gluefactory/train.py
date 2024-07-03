@@ -298,7 +298,9 @@ def training(rank, conf, output_dir, args):
         model.load_state_dict(init_cp["model"], strict=False)
     if args.distributed:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[device], find_unused_parameters=True
+        )
     if rank == 0 and args.print_arch:
         logger.info(f"Model: \n{model}")
 
@@ -412,7 +414,9 @@ def training(rank, conf, output_dir, args):
         # print average timings for jpldd model if timing is activated
         if rank == 0 and epoch > 0 and conf.train.timeit:
             if args.distributed:
-                timings = model.module.get_current_timings(reset=False)  # use running average
+                timings = model.module.get_current_timings(
+                    reset=False
+                )  # use running average
             else:
                 timings = model.get_current_timings(reset=False)
             logger.info(f"(Rank {rank}) timings for epoch {epoch-1}: {timings}")
@@ -556,7 +560,9 @@ def training(rank, conf, output_dir, args):
                         writer.add_pr_curve("val/" + k, *v, tot_n_samples)
                     # @TODO: optional always save checkpoint
                     if results[conf.train.best_key] < best_eval:
-                        logger.warning(f"Got new best evaluation value at E {epoch}, IT {it}. Saving new state of experiment!")
+                        logger.warning(
+                            f"Got new best evaluation value at E {epoch}, IT {it}. Saving new state of experiment!"
+                        )
                         best_eval = results[conf.train.best_key]
                         save_experiment(
                             model,
@@ -583,7 +589,9 @@ def training(rank, conf, output_dir, args):
                 torch.cuda.empty_cache()  # should be cleared at the first iter
 
             if (tot_it % conf.train.save_every_iter == 0 and tot_it > 0) and rank == 0:
-                logger.warning(f"E {epoch}, IT {it}: saving experiment at current state!")
+                logger.warning(
+                    f"E {epoch}, IT {it}: saving experiment at current state!"
+                )
                 if results is None:
                     results, _, _ = do_evaluation(
                         model,

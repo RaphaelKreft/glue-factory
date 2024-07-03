@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from homography_est import (
     LineSegment,
     ransac_line_homography,
