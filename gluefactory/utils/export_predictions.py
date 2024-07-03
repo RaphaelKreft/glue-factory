@@ -16,13 +16,13 @@ from .tensor import batch_to_device
 
 @torch.no_grad()
 def export_predictions(
-        loader,
-        model,
-        output_file,
-        as_half=False,
-        keys="*",
-        callback_fn=None,
-        optional_keys=[],
+    loader,
+    model,
+    output_file,
+    as_half=False,
+    keys="*",
+    callback_fn=None,
+    optional_keys=[],
 ):
     assert keys == "*" or isinstance(keys, (tuple, list))
     Path(output_file).parent.mkdir(exist_ok=True, parents=True)
@@ -30,8 +30,7 @@ def export_predictions(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device).eval()
     for data_ in tqdm(loader):
-        data = batch_to_device(data_, device,
-                               non_blocking=True)
+        data = batch_to_device(data_, device, non_blocking=True)
         # add temporary fix (add batch dimension & to-float)
         pred = model(data)
         if callback_fn is not None:
@@ -71,7 +70,7 @@ def export_predictions(
                 if (dt == np.float32) and (dt != np.float16):
                     pred[k] = pred[k].astype(np.float16)
         try:
-            name = data["name"][0]  #[0] # todo use relative name/path
+            name = data["name"][0]  # [0] # todo use relative name/path
             grp = hfile.create_group(name)
             for k, v in pred.items():
                 grp.create_dataset(k, data=v)

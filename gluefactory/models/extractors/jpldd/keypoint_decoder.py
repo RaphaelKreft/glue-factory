@@ -3,6 +3,7 @@ keypoint_decoder.py: contains possible keypoint decoders
 
 - ALIKED SMH (ScoreMapHead)
 """
+
 import torch
 from torch import nn
 from torchvision.models import resnet

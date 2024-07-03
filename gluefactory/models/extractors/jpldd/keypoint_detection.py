@@ -4,20 +4,21 @@ keypoint_detection.py: Contains nets / methods that extract keypoints from the k
 - DKD from ALIKE
 """
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
-from typing import Optional
 
 from .utils import simple_nms
 
 
 class DKD(nn.Module):
     def __init__(
-            self,
-            radius: int = 2,
-            top_k: int = 0,
-            scores_th: float = 0.2,
-            n_limit: int = 20000,
+        self,
+        radius: int = 2,
+        top_k: int = 0,
+        scores_th: float = 0.2,
+        n_limit: int = 20000,
     ):
         """
         Args:
@@ -45,10 +46,10 @@ class DKD(nn.Module):
         )
 
     def forward(
-            self,
-            scores_map: torch.Tensor,
-            sub_pixel: bool = True,
-            image_size: Optional[torch.Tensor] = None,
+        self,
+        scores_map: torch.Tensor,
+        sub_pixel: bool = True,
+        image_size: Optional[torch.Tensor] = None,
     ):
         """
         :param scores_map: Bx1xHxW
@@ -67,11 +68,11 @@ class DKD(nn.Module):
             print("IMG-SIZE", image_size, " ", type(image_size))
             for i in range(scores_map.shape[0]):
                 w, h = image_size[i].long()
-                nms_scores[i, :, h.item() - self.radius:, :] = 0
-                nms_scores[i, :, :, w.item() - self.radius:] = 0
+                nms_scores[i, :, h.item() - self.radius :, :] = 0
+                nms_scores[i, :, :, w.item() - self.radius :] = 0
         else:
-            nms_scores[:, :, -self.radius:, :] = 0
-            nms_scores[:, :, :, -self.radius:] = 0
+            nms_scores[:, :, -self.radius :, :] = 0
+            nms_scores[:, :, :, -self.radius :] = 0
 
         # detect keypoints without grad
         if self.top_k > 0:
@@ -122,21 +123,21 @@ class DKD(nn.Module):
                 # max is detached to prevent undesired backprop loops in the graph
                 max_v = patch_scores.max(dim=1).values.detach()[:, None]
                 x_exp = (
-                        (patch_scores - max_v) / self.temperature
+                    (patch_scores - max_v) / self.temperature
                 ).exp()  # M * (kernel**2), in [0, 1]
 
                 # \frac{ \sum{(i,j) \times \exp(x/T)} }{ \sum{\exp(x/T)} }
                 xy_residual = (
-                        x_exp @ self.hw_grid / x_exp.sum(dim=1)[:, None]
+                    x_exp @ self.hw_grid / x_exp.sum(dim=1)[:, None]
                 )  # Soft-argmax, Mx2
 
                 hw_grid_dist2 = (
-                        torch.norm(
-                            (self.hw_grid[None, :, :] - xy_residual[:, None, :])
-                            / self.radius,
-                            dim=-1,
-                        )
-                        ** 2
+                    torch.norm(
+                        (self.hw_grid[None, :, :] - xy_residual[:, None, :])
+                        / self.radius,
+                        dim=-1,
+                    )
+                    ** 2
                 )
                 scoredispersity = (x_exp * hw_grid_dist2).sum(dim=1) / x_exp.sum(dim=1)
 
@@ -150,8 +151,8 @@ class DKD(nn.Module):
                     mode="bilinear",
                     align_corners=True,
                 )[
-                           0, 0, 0, :
-                           ]  # CxN
+                    0, 0, 0, :
+                ]  # CxN
 
                 keypoints.append(keypoints_xy)
                 scoredispersitys.append(scoredispersity)
@@ -173,8 +174,8 @@ class DKD(nn.Module):
                     mode="bilinear",
                     align_corners=True,
                 )[
-                           0, 0, 0, :
-                           ]  # CxN
+                    0, 0, 0, :
+                ]  # CxN
                 keypoints.append(keypoints_xy)
                 scoredispersitys.append(kptscore)  # for jit.script compatability
                 kptscores.append(kptscore)
@@ -197,8 +198,8 @@ class SimpleDetector(object):
         # remove border
         nms_scores[:, :, : self.nms_radius, :] = 0
         nms_scores[:, :, :, : self.nms_radius] = 0
-        nms_scores[:, :, -self.nms_radius:, :] = 0
-        nms_scores[:, :, :, -self.nms_radius:] = 0
+        nms_scores[:, :, -self.nms_radius :, :] = 0
+        nms_scores[:, :, :, -self.nms_radius :] = 0
 
         # select top keypoints or threshold
         # Extract keypoints
@@ -223,7 +224,7 @@ class SimpleDetector(object):
                 k = keypoints_all
                 s = scores_all
             # if self.num_keypoints is not None: ToDo: fix
-                #k, s = select_top_k_keypoints(k, s, self.num_keypoints)
+            # k, s = select_top_k_keypoints(k, s, self.num_keypoints)
 
             keypoints.append(k)
             scores.append(s)
@@ -232,21 +233,21 @@ class SimpleDetector(object):
 
 class DKDLight(nn.Module):
     def __init__(
-            self,
-            radius: int = 2,
-            top_k: int = 0,
-            scores_th: float = 0.2,
-            n_limit: int = 20000,
+        self,
+        radius: int = 2,
+        top_k: int = 0,
+        scores_th: float = 0.2,
+        n_limit: int = 20000,
     ):
         """
-            Args:
-                radius: soft detection radius, kernel size is (2 * radius + 1)
-                top_k: top_k > 0: return top k keypoints
-                scores_th: top_k <= 0 threshold mode:
-                    scores_th > 0: return keypoints with scores>scores_th
-                    else: return keypoints with scores > scores.mean()
-                n_limit: max number of keypoint in threshold mode
-            """
+        Args:
+            radius: soft detection radius, kernel size is (2 * radius + 1)
+            top_k: top_k > 0: return top k keypoints
+            scores_th: top_k <= 0 threshold mode:
+                scores_th > 0: return keypoints with scores>scores_th
+                else: return keypoints with scores > scores.mean()
+            n_limit: max number of keypoint in threshold mode
+        """
         super().__init__()
         self.radius = radius
         self.top_k = top_k
@@ -257,13 +258,13 @@ class DKDLight(nn.Module):
         self.unfold = nn.Unfold(kernel_size=self.kernel_size, padding=self.radius)
 
     def forward(
-            self,
-            scores_map: torch.Tensor,
+        self,
+        scores_map: torch.Tensor,
     ):
         """
-            :param scores_map: Bx1xHxW
-            :return: kpts: list[Nx2,...]; kptscores: list[N,....] normalised position: -1~1
-            """
+        :param scores_map: Bx1xHxW
+        :return: kpts: list[Nx2,...]; kptscores: list[N,....] normalised position: -1~1
+        """
         b, c, h, w = scores_map.shape
         scores_nograd = scores_map.detach()
         nms_scores = simple_nms(scores_nograd, self.radius)
@@ -271,8 +272,8 @@ class DKDLight(nn.Module):
         # remove border
         nms_scores[:, :, : self.radius, :] = 0
         nms_scores[:, :, :, : self.radius] = 0
-        nms_scores[:, :, -self.radius:, :] = 0
-        nms_scores[:, :, :, -self.radius:] = 0
+        nms_scores[:, :, -self.radius :, :] = 0
+        nms_scores[:, :, :, -self.radius :] = 0
 
         # detect keypoints without grad
         if self.top_k > 0:
@@ -321,8 +322,8 @@ class DKDLight(nn.Module):
                 mode="bilinear",
                 align_corners=True,
             )[
-                       0, 0, 0, :
-                       ]  # CxN
+                0, 0, 0, :
+            ]  # CxN
             keypoints.append(keypoints_xy)
             kptscores.append(kptscore)
 

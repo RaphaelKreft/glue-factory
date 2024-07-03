@@ -1,11 +1,11 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 # Helper used in SDDH
 def get_patches(
-        tensor: torch.Tensor, required_corners: torch.Tensor, ps: int
+    tensor: torch.Tensor, required_corners: torch.Tensor, ps: int
 ) -> torch.Tensor:
     c, h, w = tensor.shape
     corner = (required_corners - ps / 2 + 1).long()
@@ -26,13 +26,13 @@ def get_patches(
 
 class SDDH(nn.Module):
     def __init__(
-            self,
-            dims: int,
-            kernel_size: int = 3,
-            n_pos: int = 8,
-            gate=nn.ReLU(),
-            conv2D=False,
-            mask=False,
+        self,
+        dims: int,
+        kernel_size: int = 3,
+        n_pos: int = 8,
+        gate=nn.ReLU(),
+        conv2D=False,
+        mask=False,
     ):
         super(SDDH, self).__init__()
         self.kernel_size = kernel_size
@@ -146,8 +146,8 @@ class SDDH(nn.Module):
                 )  # [N_kpts, C]
             else:
                 features = features.reshape(N_kpts, -1)[
-                           :, :, None, None
-                           ]  # [N_kpts, C*n_pos, 1, 1]
+                    :, :, None, None
+                ]  # [N_kpts, C*n_pos, 1, 1]
                 descs = self.convM(features).squeeze()  # [N_kpts, C]
 
             # normalize
@@ -155,4 +155,3 @@ class SDDH(nn.Module):
             descriptors.append(descs)
 
         return descriptors, offsets
-

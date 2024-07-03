@@ -7,6 +7,7 @@ ground-truth beforehand.
 Input=Img+Keypoint-locations
 Output=descriptors
 """
+
 from typing import Callable, Optional
 
 import torch
@@ -77,7 +78,6 @@ def simple_nms(scores: torch.Tensor, nms_radius: int):
         )
         max_mask = max_mask | (new_max_mask & (~supp_mask))
     return torch.where(max_mask, scores, zeros)
-
 
 
 class InputPadder(object):

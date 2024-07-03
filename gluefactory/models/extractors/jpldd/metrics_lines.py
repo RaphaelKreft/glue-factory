@@ -1,14 +1,20 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from gluefactory.geometry.line_utils import (
-    get_structural_line_dist, get_orth_line_dist, get_common_lines,
-    get_area_line_dist, angular_distance, overlap_distance_sym,
-    get_lip_line_dist)
 from gluefactory.datasets.homographies import warp_points
 from gluefactory.datasets.homographies_deeplsd import warp_lines
-#from ..models.lbd import PyTLBD
-#from homography_est import LineSegment, ransac_line_homography
+from gluefactory.geometry.line_utils import (
+    angular_distance,
+    get_area_line_dist,
+    get_common_lines,
+    get_lip_line_dist,
+    get_orth_line_dist,
+    get_structural_line_dist,
+    overlap_distance_sym,
+)
+
+# from ..models.lbd import PyTLBD
+# from homography_est import LineSegment, ransac_line_homography
 
 
 num_lines_thresholds = [10, 25, 50, 100, 300]
@@ -17,50 +23,80 @@ thresholds = [1, 2, 3, 4, 5]
 ### Line matching
 
 
-
-
-def get_rep_and_loc_error(lines: np.ndarray, warped_lines: np.ndarray, Hs: np.ndarray,img_size: tuple[float,float]) -> tuple[float,float]:
+def get_rep_and_loc_error(
+    lines: np.ndarray,
+    warped_lines: np.ndarray,
+    Hs: np.ndarray,
+    img_size: tuple[float, float],
+) -> tuple[float, float]:
     (struct_rep, struct_loc_error, num_lines) = [], [], []
     for i in range(len(lines)):
         cur_lines = lines[i]
         cur_warped_lines = warped_lines[i]
         num_lines.append((len(cur_lines) + len(cur_warped_lines)) / 2)
         segs1, segs2, matched_idx1, matched_idx2, distances = match_segments_1_to_1(
-            cur_lines, cur_warped_lines, Hs[i], img_size, line_dist='struct', dist_thresh=5)
+            cur_lines,
+            cur_warped_lines,
+            Hs[i],
+            img_size,
+            line_dist="struct",
+            dist_thresh=5,
+        )
         if len(matched_idx1) == 0:
             struct_rep.append([0] * len(thresholds))
             struct_loc_error.append([0] * len(thresholds))
         else:
-            struct_rep.append(compute_repeatability(segs1, segs2, matched_idx1, matched_idx2,
-                                                    distances, thresholds, rep_type='num'))
+            struct_rep.append(
+                compute_repeatability(
+                    segs1,
+                    segs2,
+                    matched_idx1,
+                    matched_idx2,
+                    distances,
+                    thresholds,
+                    rep_type="num",
+                )
+            )
             struct_loc_error.append(compute_loc_error(distances, num_lines_thresholds))
     num_lines = np.mean(num_lines)
     repeatability = np.mean(np.stack(struct_rep, axis=0), axis=0)
     loc_error = np.mean(np.stack(struct_loc_error, axis=0), axis=0)
-    return repeatability,loc_error
+    return repeatability, loc_error
 
 
 def match_segments_1_to_1(
-    line_seg1, line_seg2, H, img_size, line_dist='area',
-    angular_th=(30 * np.pi / 180), overlap_th=0.5, dist_thresh=5):
-    """ Match segs1 and segs2 1-to-1, minimizing the chosen line distance.
-        Ensure a minimum overlap and maximum angle difference. """
+    line_seg1,
+    line_seg2,
+    H,
+    img_size,
+    line_dist="area",
+    angular_th=(30 * np.pi / 180),
+    overlap_th=0.5,
+    dist_thresh=5,
+):
+    """Match segs1 and segs2 1-to-1, minimizing the chosen line distance.
+    Ensure a minimum overlap and maximum angle difference."""
     HIGH_VALUE = 100000
 
     # Gather lines in common between the two views and warp lines1 to img0
     segs1, segs2 = get_common_lines(line_seg1, line_seg2, H, img_size)
 
     if len(segs1) == 0 or len(segs2) == 0:
-        return (np.empty((0, 2, 2)), np.empty((0, 2, 2)),
-                np.empty(0), np.empty(0), np.empty(0))
+        return (
+            np.empty((0, 2, 2)),
+            np.empty((0, 2, 2)),
+            np.empty(0),
+            np.empty(0),
+            np.empty(0),
+        )
 
-    if line_dist == 'struct':
+    if line_dist == "struct":
         full_distance_matrix = get_structural_line_dist(segs1, segs2)
-    elif line_dist == 'orth':
+    elif line_dist == "orth":
         full_distance_matrix = get_orth_line_dist(segs1, segs2, overlap_th)
-    elif line_dist == 'area':
+    elif line_dist == "area":
         full_distance_matrix = get_area_line_dist(segs1, segs2)
-    elif line_dist == 'lip':
+    elif line_dist == "lip":
         full_distance_matrix = get_lip_line_dist(segs1, segs2)
     else:
         raise ValueError("Unknown line distance: " + line_dist)
@@ -121,9 +157,11 @@ def match_segments_1_to_1(
 
 ### Metrics computation
 
-def compute_repeatability(segs1, segs2, matched_idx1, matched_idx2,
-                          distances, thresholds, rep_type='num'):
-    """ Compute the repeatability between two sets of matched lines.
+
+def compute_repeatability(
+    segs1, segs2, matched_idx1, matched_idx2, distances, thresholds, rep_type="num"
+):
+    """Compute the repeatability between two sets of matched lines.
     Args:
         segs1, segs2: the original sets of lines.
         matched_idx1, matched_idx2: the indices of the matches.
@@ -144,15 +182,14 @@ def compute_repeatability(segs1, segs2, matched_idx1, matched_idx2,
     reps = []
     for t in thresholds:
         correct = distances <= t
-        if rep_type == 'num':
+        if rep_type == "num":
             rep = np.sum(correct) / min(n1, n2)
-        elif rep_type == 'length':
+        elif rep_type == "length":
             len1 = np.linalg.norm(segs1[:, 0] - segs1[:, 1], axis=1)
             len2 = np.linalg.norm(segs2[:, 0] - segs2[:, 1], axis=1)
             matched_len1 = len1[matched_idx1[correct]]
             matched_len2 = len2[matched_idx2[correct]]
-            rep = ((matched_len1.sum() + matched_len2.sum())
-                   / (len1.sum() + len2.sum()))
+            rep = (matched_len1.sum() + matched_len2.sum()) / (len1.sum() + len2.sum())
         else:
             raise ValueError("Unknown repeatability type: " + rep_type)
         reps.append(rep)
@@ -160,7 +197,7 @@ def compute_repeatability(segs1, segs2, matched_idx1, matched_idx2,
 
 
 def compute_loc_error(distances, thresholds):
-    """ Compute the line localization error between two sets of lines.
+    """Compute the line localization error between two sets of lines.
     Args:
         distances: the line distance of the matches, in increasing order.
         thresholds: int or list of number of lines to take into account.
@@ -241,8 +278,9 @@ def get_inliers_and_reproj_error(line_seg1, line_seg2, H, tol_px=5):
 
 ### Vanishing point estimation
 
+
 def dist_lines_vp(lines, vp):
-    """ Estimate the distance between a set of lines
+    """Estimate the distance between a set of lines
         and VPs in homogeneous format.
     Args:
         lines: [N, 2, 2] array in ij convention.
@@ -251,9 +289,8 @@ def dist_lines_vp(lines, vp):
         An [N, M] distance matrix of each line to each VP.
     """
     # Center of the lines
-    centers = ((lines[:, 0] + lines[:, 1]) / 2)
-    centers = np.concatenate([centers[:, [1, 0]],
-                              np.ones_like(centers[:, :1])], axis=1)
+    centers = (lines[:, 0] + lines[:, 1]) / 2
+    centers = np.concatenate([centers[:, [1, 0]], np.ones_like(centers[:, :1])], axis=1)
 
     # Line passing through the VP and the center of the lines
     # l = cross(center, vp)
@@ -262,18 +299,18 @@ def dist_lines_vp(lines, vp):
     line_vp_norm = np.linalg.norm(line_vp[:, :, :2], axis=2)
 
     # Orthogonal distance of the lines to l
-    endpts = np.concatenate([lines[:, 0][:, [1, 0]],
-                             np.ones_like(lines[:, 0, :1])], axis=1)
-    orth_dist = np.abs(np.sum(endpts[:, None] * line_vp,
-                              axis=2)) / line_vp_norm
+    endpts = np.concatenate(
+        [lines[:, 0][:, [1, 0]], np.ones_like(lines[:, 0, :1])], axis=1
+    )
+    orth_dist = np.abs(np.sum(endpts[:, None] * line_vp, axis=2)) / line_vp_norm
     return orth_dist
 
 
 def vp_consistency_check(gt_lines, line_clusters, vps, tol=3):
-    """ Given a set of GT lines, their GT VP clustering and estimated VPs,
-        assign each cluster of line to a unique VP and compute the ratio
-        of lines consistent with the assigned VP.
-        Return a list of consistency, for each tolerance threshold in tol. """
+    """Given a set of GT lines, their GT VP clustering and estimated VPs,
+    assign each cluster of line to a unique VP and compute the ratio
+    of lines consistent with the assigned VP.
+    Return a list of consistency, for each tolerance threshold in tol."""
     if not isinstance(tol, list):
         tol = [tol]
 
@@ -299,25 +336,26 @@ def vp_consistency_check(gt_lines, line_clusters, vps, tol=3):
         num_consistent = 0
         for cl, vp in zip(cluster_assignment, vp_assignment):
             num_consistent += np.sum(
-                distances[line_clusters == cluster_labels[cl]][:, vp] < t)
+                distances[line_clusters == cluster_labels[cl]][:, vp] < t
+            )
         consistency_check.append(num_consistent / num_lines)
 
     return consistency_check
 
 
 def unproject_vp_to_world(vp, K):
-    """ Convert the VPs from homogenous format in the image plane
-        to world direction. """
+    """Convert the VPs from homogenous format in the image plane
+    to world direction."""
     proj_vp = (np.linalg.inv(K) @ vp.T).T
     proj_vp[:, 1] *= -1
     proj_vp /= np.linalg.norm(proj_vp, axis=1, keepdims=True)
     return proj_vp
 
 
-def get_vp_error(gt_vp, pred_vp, K, max_err=10.):
-    """ Compute the angular error between the predicted and GT VPs in 3D.
-        The GT VPs are expected in 3D and unit normalized,
-        but the predicted ones are in homogeneous format in the image. """
+def get_vp_error(gt_vp, pred_vp, K, max_err=10.0):
+    """Compute the angular error between the predicted and GT VPs in 3D.
+    The GT VPs are expected in 3D and unit normalized,
+    but the predicted ones are in homogeneous format in the image."""
     # Unproject the predicted VP to world coordinates
     pred_vp_3d = pred_vp.copy()
     finite = np.abs(pred_vp_3d[:, 2]) > 1e-5
@@ -325,7 +363,7 @@ def get_vp_error(gt_vp, pred_vp, K, max_err=10.):
     pred_vp_3d = unproject_vp_to_world(pred_vp_3d, K)
 
     # Compute the pairwise cosine distances
-    vp_dist = np.abs(np.einsum('nd,md->nm', gt_vp, pred_vp_3d))
+    vp_dist = np.abs(np.einsum("nd,md->nm", gt_vp, pred_vp_3d))
 
     # Find the optimal assignment
     gt_idx, pred_idx = linear_sum_assignment(vp_dist, maximize=True)
@@ -343,10 +381,10 @@ def get_vp_error(gt_vp, pred_vp, K, max_err=10.):
 
 
 def get_vp_detection_ratio(gt_vp, pred_vp, K, thresholds):
-    """ Compute the angular error between the predicted and GT VPs in 3D.
-        The GT VPs are expected in 3D and unit normalized,
-        but the predicted ones are in homogeneous format in the image.
-        Count how many correct VPs are obtained for each error threshold. """
+    """Compute the angular error between the predicted and GT VPs in 3D.
+    The GT VPs are expected in 3D and unit normalized,
+    but the predicted ones are in homogeneous format in the image.
+    Count how many correct VPs are obtained for each error threshold."""
     # Unproject the predicted VP to world coordinates
     pred_vp_3d = pred_vp.copy()
     finite = np.abs(pred_vp_3d[:, 2]) > 1e-5
@@ -354,7 +392,7 @@ def get_vp_detection_ratio(gt_vp, pred_vp, K, thresholds):
     pred_vp_3d = unproject_vp_to_world(pred_vp_3d, K)
 
     # Compute the pairwise cosine distances
-    vp_dist = np.abs(np.einsum('nd,md->nm', gt_vp, pred_vp_3d))
+    vp_dist = np.abs(np.einsum("nd,md->nm", gt_vp, pred_vp_3d))
 
     # Find the optimal assignment
     gt_idx, pred_idx = linear_sum_assignment(vp_dist, maximize=True)
@@ -369,10 +407,10 @@ def get_vp_detection_ratio(gt_vp, pred_vp, K, thresholds):
 
 
 def get_recall_AUC(gt_vp, pred_vp, K):
-    """ Compute the angular error between the predicted and GT VPs in 3D,
-        compute the recall for different error thresholds, and compute the AUC.
-        The GT VPs are expected in 3D and unit normalized,
-        but the predicted ones are in homogeneous format in the image. """
+    """Compute the angular error between the predicted and GT VPs in 3D,
+    compute the recall for different error thresholds, and compute the AUC.
+    The GT VPs are expected in 3D and unit normalized,
+    but the predicted ones are in homogeneous format in the image."""
     # Unproject the predicted VP to world coordinates
     pred_vp_3d = pred_vp.copy()
     finite = np.abs(pred_vp_3d[:, 2]) > 1e-5
@@ -380,7 +418,7 @@ def get_recall_AUC(gt_vp, pred_vp, K):
     pred_vp_3d = unproject_vp_to_world(pred_vp_3d, K)
 
     # Compute the pairwise cosine distances
-    vp_dist = np.abs(np.einsum('nd,md->nm', gt_vp, pred_vp_3d))
+    vp_dist = np.abs(np.einsum("nd,md->nm", gt_vp, pred_vp_3d))
 
     # Find the optimal assignment
     gt_idx, pred_idx = linear_sum_assignment(vp_dist, maximize=True)
