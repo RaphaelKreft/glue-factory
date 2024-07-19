@@ -188,7 +188,15 @@ def process_image(image_path, num_H, output_folder_path):
     superpoint_heatmap = ha_forward(sp_image, num=num_H)
     superpoint_heatmap = superpoint_heatmap.cpu()
 
-    output_file_path = output_folder_path / f"{Path(image_path).stem}.hdf5"
+    print("output_folder_path: ", output_folder_path)
+    print("image_path: ", image_path)
+
+    unique_name = Path(image_path).parts[-3] + Path(image_path).parts[-2]
+    output_file_path = output_folder_path / f"{unique_name}.hdf5"
+
+    print("output_file_path: ", output_file_path)
+
+    
 
     with h5py.File(output_file_path, "w") as f:
         f.create_dataset("superpoint_heatmap", data=superpoint_heatmap)
